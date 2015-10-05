@@ -4,6 +4,12 @@ namespace Xaamin\Curl;
 use Illuminate\Foundation\AliasLoader as Loader;
 use Illuminate\Support\ServiceProvider;
 
+/**
+ * CURL Service provider
+ *
+ * @package Xaamin\Curl
+ * @author Benjamín Martínez Mateos <bmxamin@gmail.com>
+ */
 class CurlServiceProvider extends ServiceProvider 
 {
     /**
@@ -16,7 +22,7 @@ class CurlServiceProvider extends ServiceProvider
     public function boot()
     {
         $loader  = Loader::getInstance();
-        #$loader->alias('CURL', 'Xaamin\Curl\Facades\CurlFacade');
+        $loader->alias('CURL', 'Xaamin\Curl\Facades\CurlFacade');
     }
 
     /**

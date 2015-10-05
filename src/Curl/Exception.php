@@ -1,6 +1,15 @@
 <?php namespace Xaamin\Curl\Curl;
 
-class Exception extends \Exception
+use Exception;
+use UnexpectedValueException;
+
+/**
+ * CURL Exception
+ *
+ * @package Xaamin\Curl
+ * @author Benjamín Martínez Mateos <bmxamin@gmail.com>
+ */
+class Exception extends Exception
 {
 	private $errors = [
 		CURLE_ABORTED_BY_CALLBACK => 'CURLE_ABORTED_BY_CALLBACK',
@@ -70,14 +79,20 @@ class Exception extends \Exception
 		CURLE_WRITE_ERROR => 'CURLE_WRITE_ERROR'
 	];
 	
-	function __construct( $message, $code )
+	/**
+	 * Constructor 
+	 * 
+	 * @param string 	$message
+	 * @param int 		$code
+	 */
+	function __construct($message, $code)
 	{
 		if(!array_get($this->errors, $code))
 		{
-			throw new Exception( "Unknown \$code: $code" );
+			throw new UnexpectedValueException( "Unknown CURL code: $code" );
 		}
 		
-		parent::__construct( $this->errors[$code] . ": $message", $code );
+		parent::__construct($this->errors[$code] . ": $message", $code);
 	}
 	
 }

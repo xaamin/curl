@@ -1,5 +1,4 @@
-<?php 
-namespace Xaamin\Curl;
+<?php namespace Xaamin\Curl;
 
 use Illuminate\Foundation\AliasLoader as Loader;
 use Illuminate\Support\ServiceProvider;

@@ -96,7 +96,7 @@ class Curl {
      */
     private function reset()
     {
-        $this->options = [];
+        $this->setOptions = [];
         $this->headers = [];
         $this->cookies = [];
 
@@ -344,7 +344,7 @@ class Curl {
      */
     public function setReferer($referer)
     {
-        $this->option('REFERER', $referer);
+        $this->setOption('REFERER', $referer);
         return $this;
     }
 
@@ -358,23 +358,23 @@ class Curl {
      */
     public function setProxy($proxy, $port = null, $type = 'http')
     {
-        $this->option('PROXY', $proxy);
+        $this->setOption('PROXY', $proxy);
 
         if($port)
         {
-            $this->option('PROXYPORT', $port);            
+            $this->setOption('PROXYPORT', $port);            
         }
 
         switch ($type) 
         {
             case 'http':
-                $this->option('PROXYTYPE', CURLPROXY_HTTP);
+                $this->setOption('PROXYTYPE', CURLPROXY_HTTP);
                 break;
             case 'socks4':
-                $this->option('PROXYTYPE', CURLPROXY_SOCKS4);
+                $this->setOption('PROXYTYPE', CURLPROXY_SOCKS4);
                 break;
             case 'socks5':
-                $this->option('PROXYTYPE', CURLPROXY_SOCKS5);
+                $this->setOption('PROXYTYPE', CURLPROXY_SOCKS5);
                 break;
         }
 
@@ -392,7 +392,7 @@ class Curl {
     {
         if ($username) 
         {
-            $this->option(['HTTPAUTH' => CURLAUTH_BASIC, 'USERPWD', (string) $username . ':' . (string) $password]); 
+            $this->setOption(['HTTPAUTH' => CURLAUTH_BASIC, 'USERPWD', (string) $username . ':' . (string) $password]); 
         }
       
         return $this;
@@ -413,7 +413,7 @@ class Curl {
             $timeout = $connect;
         }
 
-        $this->option(['CONNECTTIMEOUT' => $connect, 'TIMEOUT' => $timeout]);
+        $this->setOption(['CONNECTTIMEOUT' => $connect, 'TIMEOUT' => $timeout]);
 
         return $this;
     }
@@ -431,12 +431,12 @@ class Curl {
         {
             foreach ($key as $index => $value)
             {
-                $this->options[$index] = $value;
+                $this->setOptions[$index] = $value;
             }
         }
         else
         {
-            $this->options[$key] = $value;
+            $this->setOptions[$key] = $value;
         }
 
         return $this;
@@ -655,7 +655,7 @@ class Curl {
         }
 
         // Set any custom CURL options
-        foreach ($this->options as $option => $value) 
+        foreach ($this->setOptions as $option => $value) 
         {
             $this->setOpt(constant('CURLOPT_'.str_replace('CURLOPT_', '', Str::upper($option))), $value);
         }

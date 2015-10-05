@@ -96,7 +96,7 @@ class Curl {
      */
     private function reset()
     {
-        $this->setOptions = [];
+        $this->options = [];
         $this->headers = [];
         $this->cookies = [];
 
@@ -655,7 +655,7 @@ class Curl {
         }
 
         // Set any custom CURL options
-        foreach ($this->setOptions as $option => $value) 
+        foreach ($this->options as $option => $value) 
         {
             $this->setOpt(constant('CURLOPT_'.str_replace('CURLOPT_', '', Str::upper($option))), $value);
         }

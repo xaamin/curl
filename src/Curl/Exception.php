@@ -1,12 +1,11 @@
 <?php namespace Xaamin\Curl\Curl;
 
-use Exception;
 use UnexpectedValueException;
 
 /**
  * CURL Exception handler
  */
-class Exception extends Exception
+class Exception extends \Exception
 {
 	private $errors = [
 		CURLE_ABORTED_BY_CALLBACK => 'CURLE_ABORTED_BY_CALLBACK',

@@ -8,9 +8,6 @@ use Xaamin\Curl\Curl\Exception as CurlException;
 
 /**
  * CURL wrapper
- *
- * @package Xaamin\Curl
- * @author Benjamín Martínez Mateos <xaamin@itnovado.com>
  */
 class Curl {
     

@@ -5,9 +5,6 @@ use Illuminate\Support\Str;
 /**
  * Parses the response from a Curl request into an object containing
  * the response body and an associative array of headers
- *
- * @package Xaamin\Curl
- * @author Benjamín Martínez Mateos <bmxamin@gmail.com>
  **/
 class Response {
 

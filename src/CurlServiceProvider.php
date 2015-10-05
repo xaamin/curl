@@ -4,10 +4,7 @@ use Illuminate\Foundation\AliasLoader as Loader;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * CURL Service provider
- *
- * @package Xaamin\Curl
- * @author Benjamín Martínez Mateos <bmxamin@gmail.com>
+ * CURL Package Service provider
  */
 class CurlServiceProvider extends ServiceProvider 
 {

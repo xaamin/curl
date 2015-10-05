@@ -4,10 +4,7 @@ use Exception;
 use UnexpectedValueException;
 
 /**
- * CURL Exception
- *
- * @package Xaamin\Curl
- * @author Benjamín Martínez Mateos <bmxamin@gmail.com>
+ * CURL Exception handler
  */
 class Exception extends Exception
 {

@@ -1,6 +1,6 @@
 {
     "name": "xaamin/curl",
-    "description": "A CURL Wrapper for Laravel",
+    "description": "CURL Wrapper",
     "license": "MIT",
     "keywords": [
         "curl",

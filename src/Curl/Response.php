@@ -1,8 +1,5 @@
 <?php namespace Xaamin\Curl\Curl;
 
-use Xaamin\Helpers\Str;
-use Xaamin\Helpers\Arr;
-
 /**
  * Parses the response from a Curl request into an object containing
  * the response body and an associative array of headers
@@ -72,7 +69,7 @@ class Response {
         // Inlude all received headers in the $flatHeaders
         while (count($matches))
         {
-          $flatHeaders = array_pop($matches);
+            $flatHeaders = array_pop($matches);
         }
 
         $headers = explode("\r\n", str_replace("\r\n\r\n", '', $flatHeaders));
@@ -105,9 +102,9 @@ class Response {
             {
                 preg_match('#(.*?)\:\s(.*)#', $header, $matches);
 
-                if($header = Arr::get($matches, 2))
+                if(isset($matches[2]) && $header = $matches[2])
                 {
-                    $this->headers[Str::upper(Arr::get($matches, 1))] = $header;
+                    $this->headers[strtoupper($matches[1])] = $header;
                 }
             }
         }            
@@ -122,7 +119,9 @@ class Response {
      */
     public function getHeader($index = null, $default = null)
     {
-        return Arr::get($this->headers, Str::upper($index), $default);
+        $index = Str::upper($index);
+
+        return isset($this->headers[$index]) ? $this->headers[$index] :$default;
     }
 
     /**

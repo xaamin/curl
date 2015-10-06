@@ -1,6 +1,5 @@
 <?php namespace Xaamin\Curl\Curl;
 
-use Xaamin\Helpers\Arr;
 use UnexpectedValueException;
 
 /**
@@ -84,7 +83,7 @@ class Exception extends \Exception
 	 */
 	function __construct($message, $code)
 	{
-		if(!Arr::get($this->errors, $code))
+		if(!isset($this->errors[$code])
 		{
 			throw new UnexpectedValueException( "Unknown CURL code: $code" );
 		}

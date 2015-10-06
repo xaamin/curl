@@ -1,8 +1,6 @@
 <?php namespace Xaamin\Curl;
 
 use Exception;
-use Xaamin\Helpers\Str;
-use Xaamin\Helpers\Arr;
 use UnexpectedValueException;
 use Xaamin\Curl\Curl\Response;
 use Xaamin\Curl\Curl\Exception as CurlException;
@@ -76,7 +74,7 @@ class Curl {
      * @var boolean
      */
     private $interactive;
-        
+    
     /**
      * Constructor
      */
@@ -226,7 +224,7 @@ class Curl {
         
         $response = curl_exec($this->request);
 
-        $headers = preg_split('/\r\n/', curl_getinfo($this->request, CURLINFO_HEADER_OUT), null, PREG_SPLIT_NO_EMPTY);
+        $headers = explode("\n", curl_getinfo($this->request, CURLINFO_HEADER_OUT));
 
         $this->headers = $this->parseRequestHeaders($headers);
         
@@ -261,15 +259,16 @@ class Curl {
 
             if(count($matches) > 2)
             {
-                $headers[Str::upper(Arr::get($matches, 1))] = Arr::get($matches, 2);
+                $headers[strtoupper($matches[1])] = $matches[2];
             }
             else
             {
                 preg_match('#(.*?)\s\/\sHTTP\/(.*)#', $header, $matches);
-                if(count($matches))
+
+                if(count($matches) > 2)
                 {
-                    $headers['HTTP-VERSION'] = Arr::get($matches, 2);
-                    $headers['REQUEST_METHOD'] = Arr::get($matches, 1);
+                    $headers['HTTP-VERSION'] = $matches[2];
+                    $headers['REQUEST_METHOD'] = $matches[1];
                 }
             }
         }
@@ -470,12 +469,14 @@ class Curl {
     /**
      * Return header for given key
      * 
-     * @param   string  $key    Header key
+     * @param   string  $index    Header key
      * @return  string
      */
-    public function getHeader($key = null, $default = null)
+    public function getHeader($index = null, $default = null)
     {       
-        return Arr::get($this->headers, $key, $default);
+        $index = strtoupper($index);
+
+        return isset($this->headers[$index]) ? $this->headers[$index] :$default;
     }
 
     /**
@@ -529,13 +530,15 @@ class Curl {
     /**
      * Return cookie value for given key
      * 
-     * @param   string  $index Header index
+     * @param   string  $index Cookie index
      * @param   string  $default Default value returned if header not exists
      * @return  string
      */
     public function getCookie($index, $default = null)
     {
-        return Arr::get($this->cookies, $index, $default);
+        $index = strtoupper($index);
+
+        return isset($this->cookies[$index]) ? $this->cookies[$index] :$default;
     }
 
     /**
@@ -551,9 +554,9 @@ class Curl {
         {
             $cookies = [];
 
-            foreach ($keys as $header)
+            foreach ($keys as $cookie)
             {
-                $cookies[] = $this->getHeader($header);
+                $cookies[] = $this->getCookie($cookie);
             }
 
             return $cookies;
@@ -588,7 +591,7 @@ class Curl {
      */
     protected function setRequestMethod($method) 
     {
-        switch (Str::upper($method)) 
+        switch (strtoupper($method)) 
         {
             case 'HEAD':
                 $this->setOpt(CURLOPT_NOBODY, true);
@@ -658,7 +661,7 @@ class Curl {
         // Set any custom CURL options
         foreach ($this->options as $option => $value) 
         {
-            $this->setOpt(constant('CURLOPT_'.str_replace('CURLOPT_', '', Str::upper($option))), $value);
+            $this->setOpt(constant('CURLOPT_'.str_replace('CURLOPT_', '', strtoupper($option))), $value);
         }
 
         // Set any custom cookie

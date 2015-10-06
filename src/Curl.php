@@ -1,57 +1,56 @@
 <?php namespace Xaamin\Curl;
 
+use Exception;
 use Illuminate\Support\Str;
-use Xaamin\Curl\Curl\Exception;
+use UnexpectedValueException;
 use Xaamin\Curl\Curl\Response;
+use Xaamin\Curl\Curl\Exception as CurlException;
 
 /**
  * CURL wrapper
- *
- * @package Xaamin\Curl
- * @author Benjamín Martínez Mateos <xaamin@itnovado.com>
-**/
+ */
 class Curl {
     
     /**
      * The file to read and write cookies to for requests
      *
      * @var string
-    **/
+     */
     public $cookieFile;
     
     /**
      * Determines whether or not requests should follow redirects
      *
      * @var boolean
-    **/
+     */
     public $followRedirects = true;
     
     /**
      * An associative array of headers to send along with requests
      *
      * @var array
-    **/
+     */
     public $headers = [];
     
     /**
      * An associative array of CURLOPT options to send along with requests
      *
      * @var array
-    **/
+     */
     public $options = [];
 
     /**
      * An associative array of cookies to send along with requests
      *
      * @var array
-    **/
+     */
     public $cookies = [];
         
     /**
      * The user agent to send along with requests
      *
      * @var string
-    **/
+     */
     public $userAgent;
     
     /**
@@ -59,7 +58,7 @@ class Curl {
      *
      * @var resource
      * @access protected
-    **/
+     */
     protected $request;
     
     /**
@@ -67,26 +66,24 @@ class Curl {
      *
      * @var $credentials
      * @access protected
-    **/
+     */
     protected $credentials;
 
     /**
      * Manual close Curl connection
+     * 
      * @var boolean
      */
     private $interactive;
         
     /**
-     * Initializes a Curl object
-     *
-     * Set the $cookieFile to "curl_cookie.txt" in the current directory
-     * Also set the $userAgent to $_SERVER['HTTP_USERAGENT'] if it exists or 'Curl/PHP '.PHP_VERSION.
-    **/
+     * Constructor
+     */
     public function __construct() 
     {
         if (!extension_loaded('curl')) 
         {
-            throw new \ErrorException('PHP CURL extension is not loaded');
+            throw new Exception('PHP CURL extension is not loaded');
         }
 
         $this->userAgent = 'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2049.0 Safari/537.36';
@@ -94,7 +91,8 @@ class Curl {
 
     /**
      * Reset custom options and headers 
-     * @return Curl
+     * 
+     * @return  Xaamin\Curl\Curl
      */
     private function reset()
     {
@@ -107,16 +105,17 @@ class Curl {
 
     /**
      * Set the storage path for cookie files
-     * @param  string $dir The path
-     * @return Curl
+     * 
+     * @param   string   $dir    The path
+     * @return  Xaamin\Curl\Curl
      */
-    public function storage($dir = null)
+    public function setCookieStorage($dir)
     {
         if(!$this->cookieFile)
         {
             if(!is_readable($dir) OR !file_exists($dir))
             {
-                throw new \ErrorException('Path to store the cookie file must be writable.');
+                throw new UnexpectedValueException('Path to store the cookie file must be writable.');
             }
 
             $this->cookieFile = rtrim($dir, DIRECTORY_SEPARATOR) . '/' . 'CookieCurl.txt';
@@ -126,87 +125,96 @@ class Curl {
     }
     
     /**
-     * Makes an HTTP DELETE request to the specified $url with an optional array or string of $params
+     * Makes an HTTP DELETE request to the specified url 
+     * with an optional array of parameters
      *
      * Returns a Response if the request was successful, false otherwise
      *
-     * @param string $url
-     * @param array|string $params 
-     * @return Response
-    **/
-    public function delete($url, $params = []) 
+     * @param   string  $url
+     * @param   array   $params 
+     * @return  Xaamin\Curl\Response
+     */
+    public function delete($url, array $params = []) 
     {
         return $this->request('DELETE', $url, $params);
     }
     
     /**
-     * Makes an HTTP GET request to the specified $url with an optional array or string of $params
+     * Makes an HTTP GET request to the specified url 
+     * with an optional array of parameters
      *
      * Returns a Response if the request was successful, false otherwise
      *
-     * @param string $url
-     * @param array|string $params 
-     * @return Response    **/
-    public function get($url, $params = []) 
+     * @param   string  $url
+     * @param   array   $params 
+     * @return  Xaamin\Curl\Response    
+      */
+    public function get($url, array $params = []) 
     {
         if (!empty($params)) 
         {
             $url .= stripos($url, '?') !== false ? '&' : '?';
-            $url .= is_string($params) ? $params : http_build_query((array) $params, '', '&');
+            $url .= http_build_query((array) $params, '', '&');
         }
 
         return $this->request('GET', $url);
     }
     
     /**
-     * Makes an HTTP HEAD request to the specified $url with an optional array or string of $params
+     * Makes an HTTP HEAD request to the specified url 
+     * with an optional array of parameters
      *
      * Returns a Response if the request was successful, false otherwise
      *
-     * @param string $url
-     * @param array|string $params
-     * @return Response    **/
-    public function head($url, $params = []) 
+     * @param   string  $url
+     * @param   array   $params
+     * @return  Xaamin\Curl\Response    
+      */
+    public function head($url, array $params = []) 
     {
         return $this->request('HEAD', $url, $params);
     }
     
     /**
-     * Makes an HTTP POST request to the specified $url with an optional array or string of $params
+     * Makes an HTTP POST request to the specified url 
+     * with an optional array of parameters
      *
-     * @param string $url
-     * @param array|string $params 
-     * @return Response
-    **/
-    public function post($url, $params = [], $enctype = null) 
+     * @param   string  $url
+     * @param   array   $params 
+     * @return  Xaamin\Curl\Response
+     */
+    public function post($url, array $params = [], $enctype = null) 
     {
         return $this->request('POST', $url, $params, $enctype);
     }
     
     /**
-     * Makes an HTTP PUT request to the specified $url with an optional array or string of $params
+     * Makes an HTTP PUT request to the specified url 
+     * with an optional array of parameters
      *
      * Returns a Response if the request was successful, false otherwise
      *
-     * @param string $url
-     * @param array|string $params 
-     * @return Response
-    **/
+     * @param   string  $url
+     * @param   array   $params 
+     * @return  Xaamin\Curl\Response
+     */
     public function put($url, $params = []) 
     {
         return $this->request('PUT', $url, $params);
     }
     
     /**
-     * Makes an HTTP request of the specified $method to a $url with an optional array or string of $params
+     * Makes an HTTP request of the specified $method to url 
+     * with an optional array
      *
-     * Returns a Response if the request was successful, false otherwise
+     * Returns a Response if the request was successful, 
+     * false otherwise
      *
-     * @param string $method
-     * @param string $url
-     * @param array|string $params
-     * @return Response
-    **/
+     * @param   string  $method
+     * @param   string  $url
+     * @param   mixed   $params
+     * @return  Xaamin\Curl\Response
+     */
     public function request($method, $url, $params = null, $enctype = null) 
     {
         $this
@@ -223,7 +231,7 @@ class Curl {
         
         if (!$response) 
         {
-            throw new Exception(curl_error($this->request), curl_errno($this->request));
+            throw new CurlException(curl_error($this->request), curl_errno($this->request));
         }
 
         $response = new Response($response);
@@ -238,8 +246,9 @@ class Curl {
 
     /**
      * Parse request headers into associative array
-     * @param  array $array 
-     * @return array
+     * 
+     * @param   array $array 
+     * @return  array
      */
     private function parseRequestHeaders(array $array)
     {
@@ -269,9 +278,10 @@ class Curl {
 
     /**
      * Keep CURL connection open
-     * @return Curl
+     * 
+     * @return  Xaamin\Curl\Curl
      */
-    public function interactive()
+    public function setInteractive()
     {
         $this->interactive = true;
 
@@ -280,17 +290,14 @@ class Curl {
 
     /**
      * Open a CURL connection
-     * @return Curl
+     * 
+     * @return  Xaamin\Curl\Curl
      */
     public function open($url = null)
     {
         if(!$this->request || !$this->interactive)
         {
             $this->request = curl_init($url);
-
-            $dir = dirname(__FILE__) . '/Cookie/';
-
-            $this->storage($dir);
 
             $this
                 ->setRequestOptions()
@@ -302,7 +309,8 @@ class Curl {
 
     /**
      * Close CURL connection
-     * @return 
+     * 
+     * @return  Xaamin\Curl\Curl
      */
     public function close()
     {
@@ -317,53 +325,56 @@ class Curl {
 
     /**
      * Set the User-Agent for request
-     * @param  string 
-     * @return Curl
+     * 
+     * @param   string $userAgent
+     * @return  Xaamin\Curl\Curl
      */
-    public function agent($agent)
+    public function setUserAgent($userAgent)
     {
-        $this->userAgent = $agent;
+        $this->userAgent = $userAgent;
         
         return $this;
     }
 
     /**
      * Set the HTTP_REFERER header
-     * @param  string $referer The referer header to send along with requests
-     * @return Curl
+     * 
+     * @param   string   $referer   The referer header to send along with requests
+     * @return  Xaamin\Curl\Curl
      */
-    public function referer($referer)
+    public function setReferer($referer)
     {
-        $this->option('REFERER', $referer);
+        $this->setOption('REFERER', $referer);
         return $this;
     }
 
     /**
      * Set a proxy for use during request
-     * @param  string $proxy The proxy address
-     * @param  int $port  The port
-     * @param  string proxy type.
-     * @return Curl
+     * 
+     * @param   string  $proxy  The proxy address
+     * @param   int     $port   The port
+     * @param   string  $type   Proxy type
+     * @return  Xaamin\Curl\Curl
      */
-    public function proxy($proxy, $port = null, $type = 'http')
+    public function setProxy($proxy, $port = null, $type = 'http')
     {
-        $this->option('PROXY', $proxy);
+        $this->setOption('PROXY', $proxy);
 
         if($port)
         {
-            $this->option('PROXYPORT', $port);            
+            $this->setOption('PROXYPORT', $port);            
         }
 
         switch ($type) 
         {
             case 'http':
-                $this->option('PROXYTYPE', CURLPROXY_HTTP);
+                $this->setOption('PROXYTYPE', CURLPROXY_HTTP);
                 break;
             case 'socks4':
-                $this->option('PROXYTYPE', CURLPROXY_SOCKS4);
+                $this->setOption('PROXYTYPE', CURLPROXY_SOCKS4);
                 break;
             case 'socks5':
-                $this->option('PROXYTYPE', CURLPROXY_SOCKS5);
+                $this->setOption('PROXYTYPE', CURLPROXY_SOCKS5);
                 break;
         }
 
@@ -373,45 +384,48 @@ class Curl {
     /**
      * Set the user and password for HTTP auth basic authentication method.
      *
-     * @param string $username
-     * @param string|null $password
-     * @return Curl
+     * @param   string  $username
+     * @param   string  $password
+     * @return  Xaamin\Curl\Curl
      */
-    public function auth($username, $password = null)
+    public function setAuth($username, $password = null)
     {
         if ($username) 
         {
-            $this->option(['HTTPAUTH' => CURLAUTH_BASIC, 'USERPWD', (string) $username . ':' . (string) $password]); 
+            $this->setOption(['HTTPAUTH' => CURLAUTH_BASIC, 'USERPWD', (string) $username . ':' . (string) $password]); 
         }
       
         return $this;
     }
 
     /**
-     * Set the max seconds to connect timeout and max operation timeout for current request
-     * @param  int $connect 
-     * @param  int $timeout 
-     * @return Curl
+     * Set the max seconds to connect timeout 
+     * and max operation timeout for current request
+     * 
+     * @param   int     $connect 
+     * @param   int     $timeout 
+     * @return  Xaamin\Curl\Curl
      */
-    public function timeout($connect, $timeout = null)
+    public function setTimeout($connect, $timeout = null)
     {
         if(!$timeout)
         {
             $timeout = $connect;
         }
 
-        $this->option(['CONNECTTIMEOUT' => $connect, 'TIMEOUT' => $timeout]);
+        $this->setOption(['CONNECTTIMEOUT' => $connect, 'TIMEOUT' => $timeout]);
 
         return $this;
     }
 
     /**
      * Set CURL option
-     * @param string $key Key Option
-     * @param string $value Value of key
-     * @return Curl
+     * 
+     * @param   string  $key    Key Option
+     * @param   string  $value  Value of key
+     * @return  Xaamin\Curl\Curl
      */
-    public function option($key, $value = null)
+    public function setOption($key, $value = null)
     {
         if(is_array($key))
         {
@@ -430,11 +444,12 @@ class Curl {
 
     /**
      * Set a header 
-     * @param  string|array $key
-     * @param  string $value
-     * @return Curl
+     * 
+     * @param   string|array $key
+     * @param   string $value
+     * @return  Xaamin\Curl\Curl
      */
-    public function header($key, $value = null)
+    public function setHeader($key, $value = null)
     {
         if(is_array($key))
         {
@@ -452,15 +467,35 @@ class Curl {
     }
 
     /**
-     * Return header if key is provided otherwise return all headers
-     * @param  string|null $headers
-     * @return mixed
+     * Return header for given key
+     * 
+     * @param   string  $key    Header key
+     * @return  string
      */
-    public function headers($key = null, $default = null)
+    public function getHeader($key = null, $default = null)
+    {       
+        return array_get($this->headers, $key, $default);
+    }
+
+    /**
+     * Return headers if keys are provided,
+     * otherwise return all headers
+     * 
+     * @param   array $keys
+     * @return  array
+     */
+    public function getHeaders(array $keys = [])
     {        
-        if($key)
+       if(count($keys))
         {
-            return array_get($this->headers, $key, $default);
+            $headers = [];
+
+            foreach ($keys as $header)
+            {
+                $cookies[] = $this->getHeader($header);
+            }
+
+            return $headers;
         }
 
         return $this->headers;
@@ -468,11 +503,12 @@ class Curl {
 
     /**
      * Set a cookie 
-     * @param  string|array $key
-     * @param  string $value
-     * @return Curl
+     * 
+     * @param   mixed    $key
+     * @param   string   $value
+     * @return  Xaamin\Curl\Curl
      */
-    public function cookie($key, $value = null)
+    public function setCookie($key, $value = null)
     {
         if(is_array($key))
         {
@@ -490,26 +526,46 @@ class Curl {
     }
 
     /**
-     * Return cookie if key is provided otherwise return all cookies
-     * @param  string|null $cookies
-     * @return mixed
+     * Return cookie value for given key
+     * 
+     * @param   string  $index Header index
+     * @param   string  $default Default value returned if header not exists
+     * @return  string
      */
-    public function cookies($key = null, $default = null)
+    public function getCookie($index, $default = null)
+    {
+        return array_get($this->cookies, $index, $default);
+    }
+
+    /**
+     * Return cookies if keys are provided,
+     * otherwise return all
+     * 
+     * @param   array $keys
+     * @return  array
+     */
+    public function getCookies($keys = [])
     {        
-        if($key)
+        if(count($keys))
         {
-            return array_get($this->cookies, $key, $default);
+            $cookies = [];
+
+            foreach ($keys as $header)
+            {
+                $cookies[] = $this->getHeader($header);
+            }
+
+            return $cookies;
         }
 
         return $this->cookies;
     }
     
     /**
-     * Formats and adds custom headers to the current request
+     * Format and add custom headers to the current request
      *
-     * @return void
-     * @access protected
-    **/
+     * @return  Xaamin\Curl\Curl;
+     */
     protected function setRequestHeaders() 
     {
         $headers = [];
@@ -526,10 +582,9 @@ class Curl {
     /**
      * Set the associated CURL options for a request method
      *
-     * @param string $method
-     * @return void
-     * @access protected
-    **/
+     * @param   string  $method
+     * @return  Xaamin\Curl\Curl
+     */
     protected function setRequestMethod($method) 
     {
         switch (Str::upper($method)) 
@@ -552,10 +607,13 @@ class Curl {
 
     /**
      * Set properly the URL with params
-     * @param string $url
-     * @param string|array $params 
+     * 
+     * @param   string $url
+     * @param   string|array $params 
+     * @param   $enctype
+     * @return  Xaamin\Curl\Curl
      */
-    public function setUrlWithParams($url, $params, $enctype)
+    protected function setUrlWithParams($url, $params, $enctype)
     {
         if (is_array($params) && $enctype != 'multipart/form-data')
         {
@@ -574,15 +632,12 @@ class Curl {
     
     /**
      * Set the CURLOPT options for the current request
-     *
-     * @param string $url
-     * @param string $params
-     * @return void
-     * @access protected
-    **/
+     * 
+     * @return  Xaamin\Curl\Curl
+     */
     protected function setRequestOptions() 
     {
-        # Set some default CURL options
+        // Set some default CURL options
         $this->setOpt(CURLOPT_HEADER, true);
         $this->setOpt(CURLOPT_RETURNTRANSFER, true);
         $this->setOpt(CURLOPT_USERAGENT, $this->userAgent);
@@ -599,13 +654,13 @@ class Curl {
             $this->setOpt(CURLOPT_FOLLOWLOCATION, true);
         }
 
-        # Set any custom CURL options
+        // Set any custom CURL options
         foreach ($this->options as $option => $value) 
         {
-            $this->setOpt(constant('CURLOPT_'.str_replace('CURLOPT_', '', strtoupper($option))), $value);
+            $this->setOpt(constant('CURLOPT_'.str_replace('CURLOPT_', '', Str::upper($option))), $value);
         }
 
-        # Set any custom cookie
+        // Set any custom cookie
         if(count($this->cookies))
         {
             $this->setOpt(CURLOPT_COOKIE, http_build_query($this->cookies, '', '; '));
@@ -614,22 +669,31 @@ class Curl {
         return $this;
     }
 
-    public function setOpt($option, $value)
+    /**
+     * Set CURL option for current request
+     * 
+     * @param   string $option
+     * @param   mixed
+     * @return  void
+     */
+    protected function setOpt($option, $value)
     {
         curl_setopt($this->request, $option, $value);
     }
     
     /**
-     * Returns an associative array of curl options
-     * currently configured.
+     * Returns an associative array of curl options currently configured.
      *
-     * @return array Associative array of curl options
+     * @return array
      */
     public function getRequestOptions() 
     {
-        return curl_getinfo($this->request);
+        return Xaamin\curl_getinfo\Curl($this->request);
     }
 
+    /**
+     * Close CURL conecction
+     */
     public function __destruct()
     {
         $this->close();

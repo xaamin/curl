@@ -1,5 +1,10 @@
 <?php namespace Xaamin\Curl\Curl;
 
+use UnexpectedValueException;
+
+/**
+ * CURL Exception handler
+ */
 class Exception extends \Exception
 {
 	private $errors = [
@@ -70,14 +75,20 @@ class Exception extends \Exception
 		CURLE_WRITE_ERROR => 'CURLE_WRITE_ERROR'
 	];
 	
-	function __construct( $message, $code )
+	/**
+	 * Constructor 
+	 * 
+	 * @param string 	$message
+	 * @param int 		$code
+	 */
+	function __construct($message, $code)
 	{
 		if(!array_get($this->errors, $code))
 		{
-			throw new Exception( "Unknown \$code: $code" );
+			throw new UnexpectedValueException( "Unknown CURL code: $code" );
 		}
 		
-		parent::__construct( $this->errors[$code] . ": $message", $code );
+		parent::__construct($this->errors[$code] . ": $message", $code);
 	}
 	
 }

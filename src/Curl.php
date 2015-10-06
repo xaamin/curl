@@ -1,7 +1,8 @@
 <?php namespace Xaamin\Curl;
 
 use Exception;
-use Illuminate\Support\Str;
+use Xaamin\Helpers\Str;
+use Xaamin\Helpers\Arr;
 use UnexpectedValueException;
 use Xaamin\Curl\Curl\Response;
 use Xaamin\Curl\Curl\Exception as CurlException;
@@ -260,15 +261,15 @@ class Curl {
 
             if(count($matches) > 2)
             {
-                $headers[Str::upper(array_get($matches, 1))] = array_get($matches, 2);
+                $headers[Str::upper(Arr::get($matches, 1))] = Arr::get($matches, 2);
             }
             else
             {
                 preg_match('#(.*?)\s\/\sHTTP\/(.*)#', $header, $matches);
                 if(count($matches))
                 {
-                    $headers['HTTP-VERSION'] = array_get($matches, 2);
-                    $headers['REQUEST_METHOD'] = array_get($matches, 1);
+                    $headers['HTTP-VERSION'] = Arr::get($matches, 2);
+                    $headers['REQUEST_METHOD'] = Arr::get($matches, 1);
                 }
             }
         }
@@ -474,7 +475,7 @@ class Curl {
      */
     public function getHeader($key = null, $default = null)
     {       
-        return array_get($this->headers, $key, $default);
+        return Arr::get($this->headers, $key, $default);
     }
 
     /**
@@ -534,7 +535,7 @@ class Curl {
      */
     public function getCookie($index, $default = null)
     {
-        return array_get($this->cookies, $index, $default);
+        return Arr::get($this->cookies, $index, $default);
     }
 
     /**

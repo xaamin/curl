@@ -431,12 +431,12 @@ class Curl {
         {
             foreach ($key as $index => $value)
             {
-                $this->setOptions[$index] = $value;
+                $this->options[$index] = $value;
             }
         }
         else
         {
-            $this->setOptions[$key] = $value;
+            $this->options[$key] = $value;
         }
 
         return $this;

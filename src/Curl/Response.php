@@ -1,6 +1,7 @@
 <?php namespace Xaamin\Curl\Curl;
 
-use Illuminate\Support\Str;
+use Xaamin\Helpers\Str;
+use Xaamin\Helpers\Arr;
 
 /**
  * Parses the response from a Curl request into an object containing
@@ -104,9 +105,9 @@ class Response {
             {
                 preg_match('#(.*?)\:\s(.*)#', $header, $matches);
 
-                if($header = array_get($matches, 2))
+                if($header = Arr::get($matches, 2))
                 {
-                    $this->headers[Str::upper(array_get($matches, 1))] = $header;
+                    $this->headers[Str::upper(Arr::get($matches, 1))] = $header;
                 }
             }
         }            
@@ -121,7 +122,7 @@ class Response {
      */
     public function getHeader($index = null, $default = null)
     {
-        return array_get($this->headers, Str::upper($index), $default);
+        return Arr::get($this->headers, Str::upper($index), $default);
     }
 
     /**

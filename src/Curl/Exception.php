@@ -83,7 +83,7 @@ class Exception extends \Exception
 	 */
 	function __construct($message, $code)
 	{
-		if(!isset($this->errors[$code])
+		if(!isset($this->errors[$code]))
 		{
 			throw new UnexpectedValueException( "Unknown CURL code: $code" );
 		}

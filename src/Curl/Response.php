@@ -1,24 +1,27 @@
-<?php namespace Xaamin\Curl\Curl;
+<?php 
+namespace Xaamin\Curl\Curl;
+
+use Xaamin\Curl\Curl\Header;
 
 /**
  * Parses the response from a Curl request into an object containing
  * the response body and an associative array of headers
  **/
-class Response {
-
+class Response 
+{
     /**
      * The body of the response without the headers block
      *
      * @var string
      */
     private $body = '';
-
+    
     /**
-     * An associative array containing the response's headers
+     * An associative array of headers to send along with requests
      *
-     * @var array
+     * @var \Xaamin\Curl\Curl\Header
      */
-    private $headers = array();
+    public $header;
 
     /**
      * Accepts the result of a curl request as a string
@@ -31,9 +34,27 @@ class Response {
      *
      * @param string $response
      */
-    function __construct($response) 
+    function __construct($response, Header $header) 
     {
+        $this->header = $header;
+
+        if ($response) {
+            $this->setContent($response);
+        }
+    }
+
+    /**
+     * Sets raw response contents
+     * 
+     * @return \Xaamin\Curl\Curl\Response
+     */
+    public function setRawResponse($response)
+    {
+        $this->header->clear();
+        
         $this->setResponseProperties($response);
+
+        return $this;
     }
 
     /**
@@ -67,8 +88,7 @@ class Response {
     protected function setBody($response, array $matches, $flatHeaders)
     {        
         // Inlude all received headers in the $flatHeaders
-        while (count($matches))
-        {
+        while (count($matches)) {
             $flatHeaders = array_pop($matches);
         }
 
@@ -90,62 +110,30 @@ class Response {
     protected function setHeaders($headers, $flatHeaders)
     {   
         preg_match_all('#HTTP/(\d\.\d)\s((\d\d\d)\s((.*?)(?=HTTP)|.*))#', $flatHeaders, $matches);
-        $this->headers['HTTP-VERSION'] = array_pop($matches[1]);
-        $this->headers['STATUS-CODE'] = array_pop($matches[3]);
-        $this->headers['STATUS'] = array_pop($matches[2]);
+
+        $this->header->set('Http-Version', array_pop($matches[1]));
+        $this->header->set('Status-Code', array_pop($matches[3]));
+        $this->header->set('Status', array_pop($matches[2]));
 
         // Exists more headers ?
-        if($headers)
-        {
+        if ($headers) {
             // Convert headers into an associative array
-            foreach ($headers as $header) 
-            {
+            foreach ($headers as $header) {
                 preg_match('#(.*?)\:\s(.*)#', $header, $matches);
 
-                if(isset($matches[2]) && $header = $matches[2])
-                {
-                    $this->headers[strtoupper($matches[1])] = $header;
+                if (isset($matches[2]) && $header = $matches[2]) {
+                    $this->header->set($matches[1], $header);
                 }
             }
         }            
     }
 
     /**
-     * Retrieve a header from response
-     * 
-     * @param   string   $index      Header index
-     * @param   string   $default    Default value returned if header not exists
-     * @return  string
+     * Returns \Xaamim\Curl\Curl\Header
      */
-    public function getHeader($index = null, $default = null)
+    public function header()
     {
-        $index = Str::upper($index);
-
-        return isset($this->headers[$index]) ? $this->headers[$index] :$default;
-    }
-
-    /**
-     * Fetch headers for given keys if provided,
-     * otherwise retrieve all headers from response
-     * 
-     * @param  array    $keys Headers key to fetch
-     * @return array
-     */
-    public function getHeaders(array $keys = [])
-    {
-        if(count($keys))
-        {
-            $headers = [];
-
-            foreach ($keys as $header)
-            {
-                $headers[$header] = $this->getHeader($header);
-            }
-
-            return $headers;
-        }
-
-        return $this->headers;
+        return $this->header;
     }
 
     /**

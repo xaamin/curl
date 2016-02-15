@@ -1,6 +1,6 @@
-<?php namespace Xaamin\Curl;
+<?php 
+namespace Xaamin\Curl;
 
-use Illuminate\Foundation\AliasLoader as Loader;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -17,8 +17,6 @@ class CurlServiceProvider extends ServiceProvider
 
     public function boot()
     {
-        $loader  = Loader::getInstance();
-        $loader->alias('CURL', 'Xaamin\Curl\Facades\CurlFacade');
     }
 
     /**
@@ -28,8 +26,7 @@ class CurlServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->app->singleton('CURL', function($app)
-        {
+        $this->app->singleton('CURL', function ($app) {
             return $app->make('Xaamin\Curl\Curl');
         });
     }

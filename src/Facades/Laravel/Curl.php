@@ -1,4 +1,4 @@
-<?php namespace Xaamin\Curl\Facades;
+<?php namespace Xaamin\Curl\Facades\Laravel;
 
 use Illuminate\Support\Facades\Facade;
 
@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Facade;
  * CURL Facade for use on Laravel 5
  */
 
-class CurlFacade extends Facade 
+class Curl extends Facade 
 {
 	/**
 	 * @return string

@@ -111,7 +111,7 @@ class Curl
      * 
      * @return  Xaamin\Curl\Curl
      */
-    private function clear()
+    public function clear()
     {
         $this->option->clear();
         $this->header->clear();

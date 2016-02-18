@@ -1,6 +1,11 @@
 <?php 
 namespace Xaamin\Curl;
 
+
+use Xaamin\Curl\Curl;
+use Xaamin\Curl\Curl\Header;
+use Xaamin\Curl\Curl\Option;
+use Xaamin\Curl\Curl\Response;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -26,8 +31,12 @@ class CurlServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->app->singleton('CURL', function ($app) {
-            return $app->make('Xaamin\Curl\Curl');
+        $this->app->singleton('Xaamin\Curl\Curl', function ($app) {
+            $header = new Header;
+            $option = new Option;
+            $response = new Response('', clone $header);
+
+            return new Curl($header, $option, $response);
         });
     }
 
@@ -38,6 +47,6 @@ class CurlServiceProvider extends ServiceProvider
      */
     public function provides()
     {
-        return ['CURL'];
+        return ['Xaamin\Curl\Curl'];
     }
 }

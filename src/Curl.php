@@ -89,7 +89,30 @@ class Curl
      * @var boolean
      */
     private $interactive = false;
+
+    /**
+     * The custom parameters to be sent with the request.
+     *
+     * @var array
+     */
+    protected $parameters = [];
     
+    /**
+     * JSON string pattern
+     * 
+     * @var string
+     */
+    protected $jsonPattern = '/^(?:application|text)\/(?:[a-z]+(?:[\.-][0-9a-z]+){0,}[\+\.]|x-)?json(?:-[a-z]+)?/i';
+    
+    /**
+     * XML string pattern
+     * 
+     * @var string
+     */
+    protected $xmlPattern = '~^(?:text/|application/(?:atom\+|rss\+)?)xml~i';
+
+    protected $files = [];
+
     /**
      * Constructor
      */
@@ -165,10 +188,7 @@ class Curl
       */
     public function get($url, array $params = []) 
     {
-        if (!empty($params)) {
-            $url .= stripos($url, '?') !== false ? '&' : '?';
-            $url .= http_build_query((array) $params, '', '&');
-        }
+        $this->parameters = $params;
 
         return $this->request('GET', $url);
     }
@@ -196,9 +216,9 @@ class Curl
      * @param   array   $params 
      * @return  Xaamin\Curl\Response
      */
-    public function post($url, array $params = [], $enctype = null) 
+    public function post($url, array $params = []) 
     {
-        return $this->request('POST', $url, $params, $enctype);
+        return $this->request('POST', $url, $params);
     }
     
     /**
@@ -228,12 +248,12 @@ class Curl
      * @param   mixed   $params
      * @return  Xaamin\Curl\Response
      */
-    public function request($method, $url, $params = null, $enctype = null) 
+    public function request($method, $url, $params = null) 
     {
         $this
             ->open()
             ->setRequestMethod($method)
-            ->setUrlWithParams($url, $params, $enctype);
+            ->setUrlWithParams($url, $params);
         
         $response = curl_exec($this->request);
 
@@ -291,7 +311,7 @@ class Curl
      */
     public function setInteractive($boolean = true)
     {
-        $this->interactive = $boolean;
+        $this->interactive = (boolean)$boolean;
 
         return $this;
     }
@@ -342,6 +362,13 @@ class Curl
         return $this;
     }
 
+    public function ignoreSsl($boolean)
+    {
+        $this->option->set('SSL_VERIFYPEER', (boolean)$boolean);
+
+        return $this;
+    }
+
     /**
      * Set the HTTP_REFERER header
      * 
@@ -351,6 +378,7 @@ class Curl
     public function setReferer($referer)
     {
         $this->option->set('REFERER', $referer);
+
         return $this;
     }
 
@@ -457,7 +485,7 @@ class Curl
             $headers[] = $key . ': ' . $value;
         }
 
-        $this->setCurlOptions(CURLOPT_HTTPHEADER, $headers);
+        $this->option->set('HTTPHEADER', $headers);
 
         return $this;
     }
@@ -472,16 +500,16 @@ class Curl
     {
         switch (strtoupper($method)) {
             case 'HEAD':
-                $this->setCurlOptions(CURLOPT_NOBODY, true);
+                $this->option->set('NOBODY', true);
                 break;
             case 'GET':
-                $this->setCurlOptions(CURLOPT_HTTPGET, true);
+                $this->option->set('HTTPGET', true);
                 break;
             case 'POST':
-                $this->setCurlOptions(CURLOPT_POST, true);
+                $this->option->set('POST', true);
                 break;
             default:
-                $this->setCurlOptions(CURLOPT_CUSTOMREQUEST, $method);
+                $this->option->set('CUSTOMREQUEST', $method);
         }
 
         return $this;
@@ -495,19 +523,111 @@ class Curl
      * @param   $enctype
      * @return  Xaamin\Curl\Curl
      */
-    protected function setUrlWithParams($url, $params, $enctype)
+    protected function setUrlWithParams($url, $params)
     {
-        if (is_array($params) && $enctype != 'multipart/form-data') {
-            $params = http_build_query($params, '', '&');
-        }
+        $url = $this->buildUrlFromBase($url);
 
-        $this->setCurlOptions(CURLOPT_URL, $url);
+        $this->option->set('URL', $url);
 
-        if (!empty($params)) {
-            $this->setCurlOptions(CURLOPT_POSTFIELDS, $params);
+        $this->setRequestContent($params);
+
+        // Set any custom CURL options
+        foreach ($this->option->get() as $option => $value) {
+            $this->setCurlOptions(constant('CURLOPT_'.str_replace('CURLOPT_', '', strtoupper($option))), $value);
         }
 
         return $this;
+    }
+
+    private function setRequestContent($params)
+    {
+        $isJson = $this->hasJsonContentType($params);
+        $isXml = $this->hasXmlContentType($params);
+
+        if ($isJson) {
+            $params = $this->setContentToJson($params);
+        }
+
+        if (!empty($this->files)) {
+            $files = $this->attachFiles();
+
+            if(!empty($files) && is_array($params)) {
+                $params += $files;
+            }
+        }
+
+        if (is_array($params) && empty($this->files)) {
+            $params = http_build_query($params, '', '&');
+        }
+
+        if($isJson || $isXml || is_string($params)) {
+            $this->setContentLength($params);
+        }
+
+        if (!empty($params)) {
+            $this->option->set('POSTFIELDS', $params);
+        }
+    }
+
+    private function hasJsonContentType($params)
+    {
+        $header = $this->header()->get('Content-Type');
+
+        if(preg_match($this->jsonPattern, $header)) return true;
+
+        return false;
+    }
+
+    private function setContentToJson($params)
+    {
+        if (is_array($params)) {
+            $params = json_encode($params);
+        }
+
+        return $params;
+    }
+
+    private function hasXmlContentType($params)
+    {
+        $header = $this->header()->get('Content-Type');
+
+        if(preg_match($this->xmlPattern, $header)) return true;
+
+        return false;
+    }
+
+    private function setContentLength($params)
+    {        
+        $this->header()->set('Content-Length', strlen($params));
+    }
+
+    private function attachFiles()
+    {
+        $params = [];
+
+        foreach ($this->files as $file) {
+            $params[$file['name']] = '@'. realpath($file['location']);
+        }
+
+        return $params;
+    }
+
+    /**
+     * Get the URL with custom parameters.
+     *
+     * @param  string  $url
+     * @return string
+     */
+    private function buildUrlFromBase($url)
+    {
+        if (!empty($this->parameters)) {
+            $url .= stripos($url, '?') !== false ? '&' : '?';
+            $url .= http_build_query((array) $this->parameters, '', '&');
+        }
+
+        $this->parameters = null;
+
+        return $url;
     }
     
     /**
@@ -518,24 +638,20 @@ class Curl
     protected function setRequestOptions() 
     {
         // Set some default CURL options
-        $this->setCurlOptions(CURLOPT_HEADER, true);
-        $this->setCurlOptions(CURLOPT_RETURNTRANSFER, true);
-        $this->setCurlOptions(CURLOPT_USERAGENT, $this->userAgent);
-        $this->setCurlOptions(CURLINFO_HEADER_OUT, true);
+        $this->option->set('HEADER', true);
+        $this->option->set('RETURNTRANSFER', true);
+        $this->option->set('USERAGENT', $this->userAgent);
 
         if ($this->cookieFile) {
-            $this->setCurlOptions(CURLOPT_COOKIEFILE, $this->cookieFile);
-            $this->setCurlOptions(CURLOPT_COOKIEJAR, $this->cookieFile);
+            $this->option->set('COOKIEFILE', $this->cookieFile);
+            $this->option->set('COOKIEJAR', $this->cookieFile);
         }
 
         if ($this->followRedirects) {
-            $this->setCurlOptions(CURLOPT_FOLLOWLOCATION, true);
-        }
+            $this->option->set('FOLLOWLOCATION', true);
+        }     
 
-        // Set any custom CURL options
-        foreach ($this->option->get() as $option => $value) {
-            $this->setCurlOptions(constant('CURLOPT_'.str_replace('CURLOPT_', '', strtoupper($option))), $value);
-        }
+        $this->setCurlOptions(CURLINFO_HEADER_OUT, true);
 
         return $this;
     }
@@ -560,6 +676,19 @@ class Curl
     protected function getRequestOptions() 
     {
         return curl_getinfo($this->request);
+    }
+
+    /**
+     * Set the custom parameters of the request.
+     *
+     * @param  array  $parameters
+     * 
+     * @return $this
+     */
+    public function with(array $parameters)
+    {
+        $this->parameters = $parameters;
+        return $this;
     }
 
     /**

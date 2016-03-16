@@ -2,15 +2,12 @@
 namespace Xaamin\Curl;
 
 use Exception;
-use UnexpectedValueException;
 use Xaamin\Curl\Curl\Header;
 use Xaamin\Curl\Curl\Option;
+use UnexpectedValueException;
 use Xaamin\Curl\Curl\Response;
 use Xaamin\Curl\Curl\Exception as CurlException;
 
-/**
- * CURL wrapper
- */
 class Curl 
 {    
     /**
@@ -18,56 +15,63 @@ class Curl
      *
      * @var string
      */
-    public $cookieFile;
+    protected $cookieFile;
     
     /**
      * Determines whether or not requests should follow redirects
      *
      * @var boolean
      */
-    public $followRedirects = true;
+    protected $followRedirects = true;
     
     /**
      * Curl headers repository instance
      *
      * @var \Xaamin\Curl\Curl\Header
      */
-    public $header;
+    protected $headerManager;
     
     /**
-     * Curl options respository instance
+     * Curl options manager
      *
      * @var \Xaamin\Curl\Curl\Option
      */
-    public $option;
+    protected $optionManager;
+
+    /**
+     * Curl headers response
+     *
+     * @var \Xaamin\Curl\Curl\Header
+     */
+    protected $headerRequested;
+    
+    /**
+     * Curl options request
+     *
+     * @var \Xaamin\Curl\Curl\Option
+     */
+    protected $optionRequested;
 
     /**
      * Curl response instance
      *
      * @var \Xaamin\Curl\Curl\Response
      */
-    public $response;
-
-    /**
-     * An associative array of headers to send along with requests
-     *
-     * @var array
-     */
-    public $headers = [];
+    protected $response;
     
     /**
-     * An associative array of CURLOPT options to send along with requests
+     * An associative array of CURLOPT info
      *
      * @var array
      */
-    public $options = [];
+    protected $requestInfo = [];
         
     /**
      * The user agent to send along with requests
      *
      * @var string
      */
-    public $userAgent;
+    protected $userAgent;
     
     /**
      * Stores resource handle for the current CURL request
@@ -88,7 +92,7 @@ class Curl
      * 
      * @var boolean
      */
-    private $interactive = false;
+    protected $interactive = false;
 
     /**
      * The custom parameters to be sent with the request.
@@ -111,12 +115,17 @@ class Curl
      */
     protected $xmlPattern = '~^(?:text/|application/(?:atom\+|rss\+)?)xml~i';
 
+    /**
+     * Files to send with request
+     * 
+     * @var array
+     */
     protected $files = [];
 
     /**
      * Constructor
      */
-    public function __construct(Header $header, Option $option, Response $response) 
+    public function __construct(Header $header, Option $option) 
     {
         if (!extension_loaded('curl')) {
             throw new Exception('PHP CURL extension is not loaded');
@@ -124,9 +133,8 @@ class Curl
 
         $this->userAgent = 'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2049.0 Safari/537.36';
 
-        $this->header = $header;
-        $this->option = $option;
-        $this->response = $response;
+        $this->headerManager = $header;
+        $this->optionManager = $option;
     }
 
     /**
@@ -134,12 +142,10 @@ class Curl
      * 
      * @return  Xaamin\Curl\Curl
      */
-    public function clear()
+    protected function clear()
     {
-        $this->option->clear();
-        $this->header->clear();
-
-        return $this;
+        $this->optionManager->clear();
+        $this->headerManager->clear();
     }
 
     /**
@@ -255,23 +261,27 @@ class Curl
             ->setRequestMethod($method)
             ->setUrlWithParams($url, $params);
         
-        $response = curl_exec($this->request);
+        $result = curl_exec($this->request);
 
         $headers = explode("\n", curl_getinfo($this->request, CURLINFO_HEADER_OUT));
 
-        $this->header->set($this->parseRequestHeaders($headers));
+        $this->headerRequested = new Header($this->parseRequestHeaders($headers), true);
+
+        $this->optionRequested = new Option($this->optionManager->get(), true);
+
+        $this->requestInfo = curl_getinfo($this->request);
         
-        if (!$response) {
+        if (!$result) {
             throw new CurlException(curl_error($this->request), curl_errno($this->request));
         }
 
-        $this->options = $this->getRequestOptions();
-
-        $response = $this->response->setRawResponse($response, clone $this->header);
+        $response = new Response($result);
         
         if (!$this->interactive) {
             $this->close();
         }
+
+        $this->clear();
         
         return $response;
     }
@@ -325,11 +335,11 @@ class Curl
     {
         if (!$this->request || !$this->interactive) {
             $this->request = curl_init($url);
-
-            $this
-                ->setRequestOptions()
-                ->setRequestHeaders();
         }
+    
+        $this
+            ->setRequestOptions()
+            ->setRequestHeaders();
 
         return $this;
     }
@@ -364,7 +374,7 @@ class Curl
 
     public function ignoreSsl($boolean)
     {
-        $this->option->set('SSL_VERIFYPEER', (boolean)$boolean);
+        $this->optionManager->set('SSL_VERIFYPEER', (boolean)$boolean);
 
         return $this;
     }
@@ -377,7 +387,7 @@ class Curl
      */
     public function setReferer($referer)
     {
-        $this->option->set('REFERER', $referer);
+        $this->optionManager->set('REFERER', $referer);
 
         return $this;
     }
@@ -392,21 +402,21 @@ class Curl
      */
     public function setProxy($proxy, $port = null, $type = 'http')
     {
-        $this->option->set('PROXY', $proxy);
+        $this->optionManager->set('PROXY', $proxy);
 
         if ($port) {
-            $this->option->set('PROXYPORT', $port);            
+            $this->optionManager->set('PROXYPORT', $port);            
         }
 
         switch ($type) {
             case 'http':
-                $this->option->set('PROXYTYPE', CURLPROXY_HTTP);
+                $this->optionManager->set('PROXYTYPE', CURLPROXY_HTTP);
                 break;
             case 'socks4':
-                $this->option->set('PROXYTYPE', CURLPROXY_SOCKS4);
+                $this->optionManager->set('PROXYTYPE', CURLPROXY_SOCKS4);
                 break;
             case 'socks5':
-                $this->option->set('PROXYTYPE', CURLPROXY_SOCKS5);
+                $this->optionManager->set('PROXYTYPE', CURLPROXY_SOCKS5);
                 break;
         }
 
@@ -423,7 +433,7 @@ class Curl
     public function setAuth($username, $password = null)
     {
         if ($username) {
-            $this->option->set(['HTTPAUTH' => CURLAUTH_BASIC, 'USERPWD', (string) $username . ':' . (string) $password]); 
+            $this->optionManager->set(['HTTPAUTH' => CURLAUTH_BASIC, 'USERPWD', (string) $username . ':' . (string) $password]); 
         }
       
         return $this;
@@ -443,35 +453,91 @@ class Curl
             $timeout = $connect;
         }
 
-        $this->option->set(['CONNECTTIMEOUT' => $connect, 'TIMEOUT' => $timeout]);
+        $this->optionManager->set(['CONNECTTIMEOUT' => $connect, 'TIMEOUT' => $timeout]);
 
         return $this;
     }
 
     /**
-     * Returns \Xaamim\Curl\Curl\Header
+     * Returns curl headers manager
+     * 
+     * @return void
      */
-    public function header()
+    public function setHeader($index, $value)
     {
-        return $this->header;
+        $this->headerManager->set($index, $value);
+    }
+
+     /**
+     * Returns curl headers requested
+     * 
+     * @return \Xaamim\Curl\Curl\Header
+     */
+    public function getHeaderManager()
+    {
+        return $this->headerManager;
     }
 
     /**
-     * Returns \Xaamim\Curl\Curl\Option
+     * Returns curl headers requested
+     * 
+     * @return mixed
      */
-    public function option()
+    public function getHeader($index = null, $default = null)
     {
-        return $this->option;
+        return $this->headerRequested->get($index, $default);
     }
 
     /**
-     * Returns CURL options for request
+     * Returns curl headers requested
+     * 
+     * @return mixed
      */
-    public function options()
+    public function getHeaders()
     {
-        return $this->options;
+        return $this->headerRequested->get();
     }
     
+    /**
+     * Return curl options manager
+     * 
+     * @return void
+     */
+    public function setOption($index, $value)
+    {
+        $this->optionManager->set($index, $value);
+    }
+
+    /**
+     * Return curl options manager
+     * 
+     * @return \Xaamim\Curl\Curl\Option
+     */
+    public function getOptionManager()
+    {
+        return $this->optionManager;
+    }
+
+    /**
+     * Return curl options requested
+     * 
+     * @return \Xaamim\Curl\Curl\Option
+     */
+    public function getOption($index = null, $default = null)
+    {
+        return $this->optionRequested->get($index, $default);
+    }
+
+    /**
+     * Return curl options requested
+     * 
+     * @return \Xaamim\Curl\Curl\Option
+     */
+    public function getOptions()
+    {
+        return $this->optionRequested->get();
+    }
+
     /**
      * Format and add custom headers to the current request
      *
@@ -481,11 +547,11 @@ class Curl
     {
         $headers = [];
 
-        foreach ($this->header->get() as $key => $value) {
+        foreach ($this->headerManager->get() as $key => $value) {
             $headers[] = $key . ': ' . $value;
         }
 
-        $this->option->set('HTTPHEADER', $headers);
+        $this->optionManager->set('HTTPHEADER', $headers);
 
         return $this;
     }
@@ -500,16 +566,16 @@ class Curl
     {
         switch (strtoupper($method)) {
             case 'HEAD':
-                $this->option->set('NOBODY', true);
+                $this->optionManager->set('NOBODY', true);
                 break;
             case 'GET':
-                $this->option->set('HTTPGET', true);
+                $this->optionManager->set('HTTPGET', true);
                 break;
             case 'POST':
-                $this->option->set('POST', true);
+                $this->optionManager->set('POST', true);
                 break;
             default:
-                $this->option->set('CUSTOMREQUEST', $method);
+                $this->optionManager->set('CUSTOMREQUEST', $method);
         }
 
         return $this;
@@ -527,12 +593,12 @@ class Curl
     {
         $url = $this->buildUrlFromBase($url);
 
-        $this->option->set('URL', $url);
+        $this->optionManager->set('URL', $url);
 
         $this->setRequestContent($params);
 
         // Set any custom CURL options
-        foreach ($this->option->get() as $option => $value) {
+        foreach ($this->optionManager->get() as $option => $value) {
             $this->setCurlOptions(constant('CURLOPT_'.str_replace('CURLOPT_', '', strtoupper($option))), $value);
         }
 
@@ -565,13 +631,13 @@ class Curl
         }
 
         if (!empty($params)) {
-            $this->option->set('POSTFIELDS', $params);
+            $this->optionManager->set('POSTFIELDS', $params);
         }
     }
 
     private function hasJsonContentType($params)
     {
-        $header = $this->header()->get('Content-Type');
+        $header = $this->headerManager->get('Content-Type');
 
         if(preg_match($this->jsonPattern, $header)) return true;
 
@@ -589,7 +655,7 @@ class Curl
 
     private function hasXmlContentType($params)
     {
-        $header = $this->header()->get('Content-Type');
+        $header = $this->headerManager->get('Content-Type');
 
         if(preg_match($this->xmlPattern, $header)) return true;
 
@@ -598,7 +664,7 @@ class Curl
 
     private function setContentLength($params)
     {        
-        $this->header()->set('Content-Length', strlen($params));
+        $this->headerManager->set('Content-Length', strlen($params));
     }
 
     private function attachFiles()
@@ -638,17 +704,17 @@ class Curl
     protected function setRequestOptions() 
     {
         // Set some default CURL options
-        $this->option->set('HEADER', true);
-        $this->option->set('RETURNTRANSFER', true);
-        $this->option->set('USERAGENT', $this->userAgent);
+        $this->optionManager->set('HEADER', true);
+        $this->optionManager->set('RETURNTRANSFER', true);
+        $this->optionManager->set('USERAGENT', $this->userAgent);
 
         if ($this->cookieFile) {
-            $this->option->set('COOKIEFILE', $this->cookieFile);
-            $this->option->set('COOKIEJAR', $this->cookieFile);
+            $this->optionManager->set('COOKIEFILE', $this->cookieFile);
+            $this->optionManager->set('COOKIEJAR', $this->cookieFile);
         }
 
         if ($this->followRedirects) {
-            $this->option->set('FOLLOWLOCATION', true);
+            $this->optionManager->set('FOLLOWLOCATION', true);
         }     
 
         $this->setCurlOptions(CURLINFO_HEADER_OUT, true);
@@ -673,9 +739,9 @@ class Curl
      *
      * @return array
      */
-    protected function getRequestOptions() 
+    public function getInfo() 
     {
-        return curl_getinfo($this->request);
+        return $this->requestInfo;
     }
 
     /**
@@ -685,7 +751,7 @@ class Curl
      * 
      * @return $this
      */
-    public function with(array $parameters)
+    public function with(array $parameters) 
     {
         $this->parameters = $parameters;
         return $this;
@@ -694,8 +760,7 @@ class Curl
     /**
      * Close CURL conecction
      */
-    public function __destruct()
-    {
+    public function __destruct() {
         $this->close();
     }
 }

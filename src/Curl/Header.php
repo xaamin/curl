@@ -1,24 +1,57 @@
 <?php 
 namespace Xaamin\Curl\Curl;
 
+use RuntimeException;
 /**
  * Handles CURL headers
  **/
 class Header
 {
+    /**
+     * Headers
+     * 
+     * @var array
+     */
 	protected $headers = [];
+
+    /**
+     * Use indexes in lower case ?
+     * 
+     * @var boolean
+     */
+    protected $toLowerCase = false;
+
+    /**
+     * Read only Headers?
+     * 
+     * @var boolean
+     */
+    protected $readOnly = false;
 
 	/**
 	 * Constructor
 	 * 
 	 * @param array 	Headers
 	 */
-	public function __construct(array $headers = [])
+	public function __construct(array $headers = [], $toLowerCase = false, $readOnly = false)
 	{
-		if (count($headers)) {
-            $this->headers = $headers;
-        }
+        $this->toLowerCase = $toLowerCase;        
+
+        $this->set($headers);
+
+        $this->readOnly = $readOnly;
 	}
+
+    /**
+     * Generate index in right case
+     * 
+     * @param string $index
+     * @return string
+     */
+    protected function getIndexRightCase($index)
+    {
+        return $this->toLowerCase ? strtolower($index) : $index;
+    }
     
     /**
      * Parse headers and set these properly
@@ -28,12 +61,16 @@ class Header
      */
     public function set($header, $value = null)
     {   
+        if ($this->readOnly) {
+            throw new RuntimeException("Set headers value not allowed (Read only).");
+        }
+
         if (is_array($header)) {
             foreach ($header as $index => $value) {
-                $this->headers[$index] = $value;
+                $this->headers[$this->getIndexRightCase($index)] = $value;
             }
         } else {
-            $this->headers[$header] = $value;
+            $this->headers[$this->getIndexRightCase($header)] = $value;
         }
     }
 
@@ -41,8 +78,8 @@ class Header
      * Fetch headers for given keys if provided,
      * otherwise retrieve all headers from response
      * 
-     * @param  array    $index 	Headers or key to fetch
-     * @return array
+     * @param  mixed    $index 	Headers or key to fetch
+     * @return mixed
      */
     public function get($index = null, $default = null)
     {
@@ -52,7 +89,7 @@ class Header
             $headers = [];
 
             foreach ($index as $header) {
-                $headers[$header] = $this->fetch($header);
+                $headers[$this->getIndexRightCase($header)] = $this->fetch($header);
             }
 
             return $headers;
@@ -66,12 +103,24 @@ class Header
      * 
      * @param   string   $index      Header index
      * @param   string   $default    Default value returned if header not exists
-     * @return  string
+     * @return  mixed
      */
     protected function fetch($index, $default = null)
     {
+        $index = $this->getIndexRightCase($index);
+
     	return isset($this->headers[$index]) ? $this->headers[$index] : $default;
         
+    }
+
+    /**
+     * Headers are read only ?
+     * 
+     * @return boolean
+     */
+    public function readonly()
+    {
+        return $this->readOnly;
     }
 
     /**

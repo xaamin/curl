@@ -1,6 +1,8 @@
 <?php 
 namespace Xaamin\Curl\Curl;
 
+use RuntimeException;
+
 /**
  * Handles CURL options
  **/
@@ -8,16 +10,23 @@ class Option
 {
 	protected $options = [];
 
+    /**
+     * Read only options?
+     * 
+     * @var boolean
+     */
+    protected $readOnly = false;
+
 	/**
 	 * Constructor
 	 * 
 	 * @param array 	Options
 	 */
-	public function __construct(array $options = [])
+	public function __construct(array $options = [], $readOnly = false)
 	{
-		if (count($options)) {
-			$this->options = $options;
-		}
+        $this->set($options);
+        
+        $this->readOnly = $readOnly;
 	}
 
     /**
@@ -28,6 +37,10 @@ class Option
      */
     public function set($option, $value = null)
     {   
+        if ($this->readOnly) {
+            throw new RuntimeException("Set options value not allowed (Read only).");
+        }
+
         if (is_array($option)) {
             foreach ($option as $index => $value) {
                 $this->options[$index] = $value;
@@ -41,8 +54,8 @@ class Option
      * Fetch options for given keys if provided,
      * otherwise retrieve all options from response
      * 
-     * @param  array    $index 	Options or key to fetch
-     * @return array
+     * @param  mixed    $index 	Options or key to fetch
+     * @return mixed
      */
     public function get($index = null, $default = null)
     {
@@ -71,6 +84,16 @@ class Option
     protected function fetch($index, $default = null)
     {
     	return isset($this->options[$index]) ? $this->options[$index] : $default;        
+    }
+
+    /**
+     * Options are read only ?
+     * 
+     * @return boolean
+     */
+    public function readonly()
+    {
+        return $this->readOnly;
     }
 
     /**

@@ -32,11 +32,7 @@ class CurlServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->singleton('Xaamin\Curl\Curl', function ($app) {
-            $header = new Header;
-            $option = new Option;
-            $response = new Response('', clone $header);
-
-            return new Curl($header, $option, $response);
+            return new Curl(new Header, new Option);
         });
     }
 

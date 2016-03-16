@@ -13,6 +13,6 @@ class Curl extends Facade
 	 */
     protected static function getFacadeAccessor()
     {
-        return 'CURL';
+        return 'Xaamin\Curl\Curl';
     }
 }

@@ -10,10 +10,6 @@ class Curl extends Facade
 {	
     public static function create()
     {
-        $header = new Header;
-        $option = new Option;
-        $response = new Response('', clone $header);
-
-        return new CurlWrapper($header, $option, $response);
+        return new CurlWrapper(new Header, new Option);
     }
 }

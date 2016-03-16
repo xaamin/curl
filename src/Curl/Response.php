@@ -17,11 +17,11 @@ class Response
     private $body = '';
     
     /**
-     * An associative array of headers to send along with requests
+     * An associative array of headers
      *
-     * @var \Xaamin\Curl\Curl\Header
+     * @var array
      */
-    public $header;
+    private $header;
 
     /**
      * Accepts the result of a curl request as a string
@@ -29,17 +29,15 @@ class Response
      * <code>
      *      $response = new Response($curlResponse);
      *      echo $response;
-     *      echo $response->header('Status');
+     *      echo $response->getHeader('Status');
      * </code>
      *
      * @param string $response
      */
-    function __construct($response, Header $header) 
+    function __construct($response = null) 
     {
-        $this->header = $header;
-
         if ($response) {
-            $this->setContent($response);
+            $this->setRawResponse($response);
         }
     }
 
@@ -49,9 +47,7 @@ class Response
      * @return \Xaamin\Curl\Curl\Response
      */
     public function setRawResponse($response)
-    {
-        $this->header->clear();
-        
+    {   
         $this->setResponseProperties($response);
 
         return $this;
@@ -65,37 +61,26 @@ class Response
      */
     protected function setResponseProperties($response)
     {
-        // Headers regex
-        $pattern = '#HTTP/\d\.\d.*?$.*?\r\n\r\n#ims';
-
-        // Extract headers from response
-        preg_match_all($pattern, $response, $matches);
-
-        $flatHeaders = array_pop($matches[0]);
+        $response = explode("\r\n\r\n", $response);
+        
+        $body = array_pop($response);
+        $flatHeaders = array_pop($response);
 
         // Set body
-        $this->setBody($response, $matches[0], $flatHeaders);
+        $this->setBody($body, $flatHeaders);
     }
 
     /**
      * Parse the CURL string response and set body content
      * 
      * @param   string    $response
-     * @param   array     $matches
      * @param   string    $flatHeaders
      * @return  string
      */
-    protected function setBody($response, array $matches, $flatHeaders)
-    {        
-        // Inlude all received headers in the $flatHeaders
-        while (count($matches)) {
-            $flatHeaders = array_pop($matches);
-        }
-
-        $headers = explode("\r\n", str_replace("\r\n\r\n", '', $flatHeaders));
-
+    protected function setBody($response, $flatHeaders)
+    {
         // Extract the version and status from the first header and set headers
-        $this->setHeaders($headers, array_shift($headers));
+        $this->setHeaders($flatHeaders);
 
         // Remove all headers from the response body
         $this->body = str_replace($flatHeaders, '', $response);
@@ -104,36 +89,49 @@ class Response
     /**
      * Parse headers and set these properly
      * 
-     * @param array     $headers
      * @param string    $flatHeaders
+     * @return void
      */
-    protected function setHeaders($headers, $flatHeaders)
+    protected function setHeaders($flatHeaders)
     {   
         preg_match_all('#HTTP/(\d\.\d)\s((\d\d\d)\s((.*?)(?=HTTP)|.*))#', $flatHeaders, $matches);
 
-        $this->header->set('Http-Version', array_pop($matches[1]));
-        $this->header->set('Status-Code', array_pop($matches[3]));
-        $this->header->set('Status', array_pop($matches[2]));
+        $headers = [];
+
+        $headers['Http-Version'] = array_pop($matches[1]);
+        $headers['Status-Code'] = array_pop($matches[3]);
+        $headers['Status'] = array_pop($matches[2]);
 
         // Exists more headers ?
-        if ($headers) {
-            // Convert headers into an associative array
-            foreach ($headers as $header) {
-                preg_match('#(.*?)\:\s(.*)#', $header, $matches);
-
-                if (isset($matches[2]) && $header = $matches[2]) {
-                    $this->header->set($matches[1], $header);
-                }
+        // Convert headers into an associative array
+        foreach (explode("\r\n", $flatHeaders) as $header) {
+            preg_match('#(.*?)\:\s(.*)#', $header, $matches);
+            if (isset($matches[2]) && $header = $matches[2]) {
+                $headers[$matches[1]] = trim($header);
             }
-        }            
+        }
+
+        $this->header = new Header($headers, true);
     }
 
     /**
-     * Returns \Xaamim\Curl\Curl\Header
+     * Return header by key
+     * 
+     * @return mixed
      */
-    public function header()
+    public function getHeader($index = null, $default = null)
     {
-        return $this->header;
+        return $this->header->get($index, $default);
+    }
+
+    /**
+     * Return all headers
+     * 
+     * @return mixed
+     */
+    public function getHeaders()
+    {
+        return $this->header->get();
     }
 
     /**
@@ -161,5 +159,4 @@ class Response
     {
         return $this->body;
     }
-
 }

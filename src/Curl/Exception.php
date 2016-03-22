@@ -1,10 +1,8 @@
-<?php namespace Xaamin\Curl\Curl;
+<?php 
+namespace Xaamin\Curl\Curl;
 
 use UnexpectedValueException;
 
-/**
- * CURL Exception handler
- */
 class Exception extends \Exception
 {
 	private $errors = [

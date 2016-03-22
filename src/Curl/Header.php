@@ -2,9 +2,7 @@
 namespace Xaamin\Curl\Curl;
 
 use RuntimeException;
-/**
- * Handles CURL headers
- **/
+
 class Header
 {
     /**

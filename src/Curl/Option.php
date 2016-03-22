@@ -3,9 +3,6 @@ namespace Xaamin\Curl\Curl;
 
 use RuntimeException;
 
-/**
- * Handles CURL options
- **/
 class Option
 {
 	protected $options = [];

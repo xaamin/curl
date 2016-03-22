@@ -758,6 +758,16 @@ class Curl
     }
 
     /**
+     * Returns current instance
+     * 
+     * @return \Xaamin\Curl\Curl
+     */
+    public function instance()
+    {
+        return $this;
+    }
+
+    /**
      * Close CURL conecction
      */
     public function __destruct() {

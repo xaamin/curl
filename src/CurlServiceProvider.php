@@ -1,7 +1,6 @@
 <?php 
 namespace Xaamin\Curl;
 
-
 use Xaamin\Curl\Curl;
 use Xaamin\Curl\Curl\Header;
 use Xaamin\Curl\Curl\Option;

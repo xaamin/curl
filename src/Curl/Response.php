@@ -3,10 +3,6 @@ namespace Xaamin\Curl\Curl;
 
 use Xaamin\Curl\Curl\Header;
 
-/**
- * Parses the response from a Curl request into an object containing
- * the response body and an associative array of headers
- **/
 class Response 
 {
     /**
@@ -22,6 +18,13 @@ class Response
      * @var array
      */
     private $header;
+
+    /**
+     * Redirect count from response
+     * 
+     * @var integer
+     */
+    protected $redirects = 0;
 
     /**
      * Accepts the result of a curl request as a string
@@ -61,11 +64,16 @@ class Response
      */
     protected function setResponseProperties($response)
     {
-        $response = explode("\r\n\r\n", $response);
-        
+        $response = explode("\r\n\r\n", $response, 2 + $this->redirects);        
         $body = array_pop($response);
-        $flatHeaders = array_pop($response);
 
+        if (preg_match('#HTTP/\d\.\d#', $body)) {
+            $response = explode("\r\n\r\n", $body, 2);
+            $body = array_pop($response);
+        }
+
+        $flatHeaders = array_pop($response);
+        
         // Set body
         $this->setBody($body, $flatHeaders);
     }
@@ -142,6 +150,16 @@ class Response
     public function getBody()
     {
         return $this->body;
+    }
+
+    /**
+     * Sets the recirect count from CURL request
+     * 
+     * @return void
+     */
+    public function setRedirectCount($total)
+    {
+        $this->redirects = (int)$total;
     }
 
     /**

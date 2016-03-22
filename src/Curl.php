@@ -276,6 +276,7 @@ class Curl
         }
 
         $response = new Response($result);
+        $response->setRedirectCount($this->requestInfo['redirect_count']);
         
         if (!$this->interactive) {
             $this->close();

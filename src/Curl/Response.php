@@ -13,11 +13,11 @@ class Response
     private $body = '';
     
     /**
-     * An associative array of headers
+     * Curl headers repository instance
      *
-     * @var array
+     * @var \Xaamin\Curl\Curl\Header
      */
-    private $header;
+    protected $headerManager;
 
     /**
      * Redirect count from response
@@ -119,7 +119,7 @@ class Response
             }
         }
 
-        $this->header = new Header($headers, true);
+        $this->headerManager = new Header($headers, true);
     }
 
     /**
@@ -129,7 +129,7 @@ class Response
      */
     public function getHeader($index = null, $default = null)
     {
-        return $this->header->get($index, $default);
+        return $this->headerManager->get($index, $default);
     }
 
     /**
@@ -139,7 +139,7 @@ class Response
      */
     public function getHeaders()
     {
-        return $this->header->get();
+        return $this->headerManager->get();
     }
 
     /**
@@ -150,6 +150,16 @@ class Response
     public function getBody()
     {
         return $this->body;
+    }
+
+    /**
+     * Returns curl headers requested
+     * 
+     * @return \Xaamim\Curl\Curl\Header
+     */
+    public function getHeaderManager()
+    {
+        return $this->headerManager;
     }
 
     /**

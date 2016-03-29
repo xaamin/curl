@@ -619,6 +619,7 @@ class Curl
             $files = $this->attachFiles();
 
             if(!empty($files) && is_array($params)) {
+                $this->headerManager->set('Content-Type', 'multipart/form-data');
                 $params += $files;
             }
         }

@@ -146,6 +146,7 @@ class Curl
     {
         $this->optionManager->clear();
         $this->headerManager->clear();
+        $this->files = [];
     }
 
     /**
@@ -606,6 +607,11 @@ class Curl
         return $this;
     }
 
+    /**
+     * Set request body
+     * 
+     * @return void
+     */
     private function setRequestContent($params)
     {
         $isJson = $this->hasJsonContentType($params);
@@ -637,6 +643,11 @@ class Curl
         }
     }
 
+    /**
+     * Verifies if body content must be JSON
+     * 
+     * @return bool
+     */
     private function hasJsonContentType($params)
     {
         $header = $this->headerManager->get('Content-Type');
@@ -646,6 +657,11 @@ class Curl
         return false;
     }
 
+    /**
+     * Parses content to JSON string
+     * 
+     * @return string
+     */
     private function setContentToJson($params)
     {
         if (is_array($params)) {
@@ -655,6 +671,11 @@ class Curl
         return $params;
     }
 
+    /**
+     * Verifies if body is XML string
+     * 
+     * @return bool
+     */
     private function hasXmlContentType($params)
     {
         $header = $this->headerManager->get('Content-Type');
@@ -664,11 +685,21 @@ class Curl
         return false;
     }
 
+    /**
+     * Set Content-Length header for string body content
+     * 
+     * @return void
+     */
     private function setContentLength($params)
     {        
         $this->headerManager->set('Content-Length', strlen($params));
     }
 
+    /**
+     * Build files params
+     * 
+     * @return array
+     */
     private function attachFiles()
     {
         $params = [];
@@ -678,6 +709,16 @@ class Curl
         }
 
         return $params;
+    }
+
+    /**
+     * Adds file to current request
+     * 
+     * @return void
+     */
+    public function addFile($name, $location)
+    {
+        $this->files[$name] = $location;
     }
 
     /**

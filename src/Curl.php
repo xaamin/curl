@@ -623,7 +623,7 @@ class Curl
             }
         }
 
-        if (is_array($params) && empty($this->files)) {
+        if (is_array($params) && empty($this->files) && $this->headerManager->get('Content-Type') != 'multipart/form-data') {
             $params = http_build_query($params, '', '&');
         }
 

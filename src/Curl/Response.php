@@ -2,6 +2,7 @@
 namespace Xaamin\Curl\Curl;
 
 use Xaamin\Curl\Curl\Header;
+use Xaamin\Curl\Curl\Cookie;
 
 class Response 
 {
@@ -27,6 +28,13 @@ class Response
     protected $redirects = 0;
 
     /**
+     * Raw headers string
+     * 
+     * @var string
+     */
+    protected $rawHeaders;
+
+    /**
      * Accepts the result of a curl request as a string
      *
      * <code>
@@ -37,9 +45,10 @@ class Response
      *
      * @param string $response
      */
-    function __construct($response = null) 
+    function __construct($response = null, $redirects = 0) 
     {
         if ($response) {
+            $this->setRedirectCount($redirects);
             $this->setRawResponse($response);
         }
     }
@@ -64,7 +73,10 @@ class Response
      */
     protected function setResponseProperties($response)
     {
-        $response = explode("\r\n\r\n", $response, 2 + $this->redirects);        
+        $this->rawHeaders = $response;
+
+        $response = explode("\r\n\r\n", $response, 2 + $this->redirects);  
+
         $body = array_pop($response);
 
         if (preg_match('#HTTP/\d\.\d#', $body)) {
@@ -74,24 +86,9 @@ class Response
 
         $flatHeaders = array_pop($response);
         
-        // Set body
-        $this->setBody($body, $flatHeaders);
-    }
-
-    /**
-     * Parse the CURL string response and set body content
-     * 
-     * @param   string    $response
-     * @param   string    $flatHeaders
-     * @return  string
-     */
-    protected function setBody($response, $flatHeaders)
-    {
-        // Extract the version and status from the first header and set headers
         $this->setHeaders($flatHeaders);
-
-        // Remove all headers from the response body
-        $this->body = str_replace($flatHeaders, '', $response);
+        $this->setCookies($flatHeaders);
+        $this->setBody($body);
     }
 
     /**
@@ -102,6 +99,7 @@ class Response
      */
     protected function setHeaders($flatHeaders)
     {   
+        // Extract the version and status from the first header and set headers
         preg_match_all('#HTTP/(\d\.\d)\s((\d\d\d)\s((.*?)(?=HTTP)|.*))#', $flatHeaders, $matches);
 
         $headers = [];
@@ -123,6 +121,32 @@ class Response
     }
 
     /**
+     * Parse the CURL string response and get cookies
+     * 
+     * @param   string    $response
+     * @param   string    $flatHeaders
+     * @return  string
+     */
+    protected function setCookies($flatHeaders)
+    {
+        // Remove all headers from the response body
+        $this->cookieManager = new Cookie($flatHeaders);
+    }
+
+    /**
+     * Set CURL body content
+     * 
+     * @param   string    $response
+     * @return  string
+     */
+    protected function setBody($response)
+    {
+        $this->body = $response;
+        $this->rawHeaders = str_replace($response, '', $this->rawHeaders);
+    }
+
+
+    /**
      * Return header by key
      * 
      * @return mixed
@@ -140,6 +164,26 @@ class Response
     public function getHeaders()
     {
         return $this->headerManager->get();
+    }
+
+    /**
+     * Return header by key
+     * 
+     * @return mixed
+     */
+    public function getCookie($index = null, $default = null)
+    {
+        return $this->cookieManager->get($index, $default);
+    }
+
+    /**
+     * Return all headers
+     * 
+     * @return mixed
+     */
+    public function getCookies()
+    {
+        return $this->cookieManager->get();
     }
 
     /**
@@ -163,6 +207,36 @@ class Response
     }
 
     /**
+     * Returns curl headers requested
+     * 
+     * @return \Xaamim\Curl\Curl\Header
+     */
+    public function header()
+    {
+        return $this->headerManager;
+    }
+
+    /**
+     * Returns curl cookies from response
+     * 
+     * @return \Xaamim\Curl\Curl\Cookie
+     */
+    public function getCookieManager()
+    {
+        return $this->cookieManager;
+    }
+
+    /**
+     * Returns curl headers requested
+     * 
+     * @return \Xaamim\Curl\Curl\Cookie
+     */
+    public function cookie()
+    {
+        return $this->cookieManager;
+    }
+
+    /**
      * Sets the recirect count from CURL request
      * 
      * @return void
@@ -170,6 +244,16 @@ class Response
     public function setRedirectCount($total)
     {
         $this->redirects = (int)$total;
+    }
+
+    /**
+     * Gets the headers as raw string 
+     * 
+     * @return string
+     */
+    public function getRawHeaders()
+    {
+        return $this->rawHeaders;
     }
 
     /**
